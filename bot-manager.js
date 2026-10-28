@@ -5,17 +5,14 @@ const processes = {};
 
 function startBot(bot) {
   if (processes[bot.id]) return;
-
   const proc = spawn('node', [bot.file_path], {
     env: { ...process.env, DISCORD_TOKEN: bot.token }
   });
-
   processes[bot.id] = proc;
-  db.prepare(`UPDATE bots SET status = 'running' WHERE id = ?`).run(bot.id);
-
+  db.run(`UPDATE bots SET status = 'running' WHERE id = ?`, [bot.id]);
   proc.on('exit', () => {
     delete processes[bot.id];
-    db.prepare(`UPDATE bots SET status = 'stopped' WHERE id = ?`).run(bot.id);
+    db.run(`UPDATE bots SET status = 'stopped' WHERE id = ?`, [bot.id]);
   });
 }
 
@@ -24,12 +21,13 @@ function stopBot(botId) {
     processes[botId].kill();
     delete processes[botId];
   }
-  db.prepare(`UPDATE bots SET status = 'stopped' WHERE id = ?`).run(botId);
+  db.run(`UPDATE bots SET status = 'stopped' WHERE id = ?`, [botId]);
 }
 
 function restoreOnStartup() {
-  const bots = db.prepare(`SELECT * FROM bots WHERE status = 'running'`).all();
-  bots.forEach(startBot);
+  db.all(`SELECT * FROM bots WHERE status = 'running'`, [], (err, bots) => {
+    if (bots) bots.forEach(startBot);
+  });
 }
 
 module.exports = { startBot, stopBot, restoreOnStartup };

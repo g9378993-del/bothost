@@ -1,7 +1,7 @@
-const Database = require('better-sqlite3');
-const db = new Database('bots.db');
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database('bots.db');
 
-db.exec(`
+db.run(`
   CREATE TABLE IF NOT EXISTS bots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,

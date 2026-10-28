@@ -14,22 +14,25 @@ app.use(express.static('public'));
 app.post('/api/bots', upload.single('file'), (req, res) => {
   const { name, token } = req.body;
   const file_path = req.file.path;
-  const result = db.prepare(
-    `INSERT INTO bots (name, token, file_path) VALUES (?, ?, ?)`
-  ).run(name, token, file_path);
-  res.json({ id: result.lastInsertRowid, name, status: 'stopped' });
+  db.run(`INSERT INTO bots (name, token, file_path) VALUES (?, ?, ?)`,
+    [name, token, file_path],
+    function(err) {
+      res.json({ id: this.lastID, name, status: 'stopped' });
+    });
 });
 
 app.get('/api/bots', (req, res) => {
-  const bots = db.prepare(`SELECT id, name, status, created_at FROM bots`).all();
-  res.json(bots);
+  db.all(`SELECT id, name, status, created_at FROM bots`, [], (err, bots) => {
+    res.json(bots || []);
+  });
 });
 
 app.post('/api/bots/:id/start', (req, res) => {
-  const bot = db.prepare(`SELECT * FROM bots WHERE id = ?`).get(req.params.id);
-  if (!bot) return res.status(404).json({ error: 'Bot introuvable' });
-  startBot(bot);
-  res.json({ status: 'running' });
+  db.get(`SELECT * FROM bots WHERE id = ?`, [req.params.id], (err, bot) => {
+    if (!bot) return res.status(404).json({ error: 'Bot introuvable' });
+    startBot(bot);
+    res.json({ status: 'running' });
+  });
 });
 
 app.post('/api/bots/:id/stop', (req, res) => {
@@ -39,7 +42,7 @@ app.post('/api/bots/:id/stop', (req, res) => {
 
 app.delete('/api/bots/:id', (req, res) => {
   stopBot(req.params.id);
-  db.prepare(`DELETE FROM bots WHERE id = ?`).run(req.params.id);
+  db.run(`DELETE FROM bots WHERE id = ?`, [req.params.id]);
   res.json({ success: true });
 });
 
