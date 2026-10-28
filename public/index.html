@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moon Hosting</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0d0d0d; color: #fff; font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+    h1 { text-align: center; margin: 20px 0 30px; color: #7289da; font-size: 2em; }
+    .card { background: #1a1a1a; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+    .card h2 { margin-bottom: 15px; color: #aaa; font-size: 1em; text-transform: uppercase; letter-spacing: 1px; }
+    input, select { width: 100%; padding: 10px; margin: 6px 0; background: #2a2a2a; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; }
+    .env-row { display: flex; gap: 8px; margin: 6px 0; }
+    .env-row input { margin: 0; }
+    .btn { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; }
+    .btn-primary { background: #7289da; color: #fff; width: 100%; margin-top: 10px; padding: 12px; }
+    .btn-deploy { background: #7289da; color: #fff; }
+    .btn-start { background: #43b581; color: #fff; }
+    .btn-stop { background: #f04747; color: #fff; }
+    .btn-delete { background: #2a2a2a; color: #aaa; border: 1px solid #333; }
+    .btn-add-env { background: #2a2a2a; color: #aaa; border: 1px solid #333; margin-top: 6px; }
+    .bot-card { background: #1a1a1a; border-radius: 12px; margin-bottom: 15px; overflow: hidden; border: 1px solid #222; }
+    .bot-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    .bot-header:hover { background: #222; }
+    .bot-info h3 { margin-bottom: 4px; }
+    .bot-info small { color: #666; font-size: 12px; }
+    .status { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: bold; }
+    .running { background: #43b581; }
+    .stopped { background: #555; }
+    .error { background: #f04747; }
+    .deploying, .starting { background: #faa61a; color: #000; }
+    .actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+    .bot-body { padding: 0 15px 15px; border-top: 1px solid #222; display: none; }
+    .bot-body.open { display: block; }
+    .logs { background: #111; border-radius: 8px; padding: 10px; margin-top: 10px; height: 150px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #aaa; }
+    .log-error { color: #f04747; }
+    .log-info { color: #aaa; }
+    #addEnvBtn { display: inline-block; }
+  </style>
+</head>
+<body>
+  <h1>🌙 Moon Hosting</h1>
+
+  <div class="card">
+    <h2>Ajouter un bot</h2>
+    <input type="text" id="botName" placeholder="Nom du bot">
+    <input type="text" id="repoUrl" placeholder="URL GitHub (ex: https://github.com/user/repo)">
+    <input type="text" id="branch" placeholder="Branch (défaut: main)">
+    <input type="text" id="mainFile" placeholder="Fichier principal (ex: index.js)">
+    <select id="runtime">
+      <option value="node">Node.js</option>
+      <option value="python">Python</option>
+    </select>
+    <div id="envVars"></div>
+    <button class="btn btn-add-env" onclick="addEnvRow()">+ Ajouter variable d'env</button>
+    <button class="btn btn-primary" onclick="addBot()">Ajouter</button>
+  </div>
+
+  <div id="botList"></div>
+
+  <script>
+    function addEnvRow(key='', val='') {
+      const div = document.createElement('div');
+      div.className = 'env-row';
+      div.innerHTML = `<input type="text" placeholder="KEY" value="${key}"><input type="text" placeholder="VALUE" value="${val}"><button class="btn btn-delete" onclick="this.parentNode.remove()">✕</button>`;
+      document.getElementById('envVars').appendChild(div);
+    }
+
+    async function addBot() {
+      const name = document.getElementById('botName').value.trim();
+      const repoUrl = document.getElementById('repoUrl').value.trim();
+      const branch = document.getElementById('branch').value.trim() || 'main';
+      const mainFile = document.getElementById('mainFile').value.trim() || 'index.js';
+      const runtime = document.getElementById('runtime').value;
+      if (!name || !repoUrl) return alert('Nom et URL requis');
+      const env = {};
+      document.querySelectorAll('#envVars .env-row').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs[0].value) env[inputs[0].value] = inputs[1].value;
+      });
+      await fetch('/api/bots', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, repoUrl, branch, mainFile, runtime, env }) });
+      document.getElementById('botName').value = '';
+      document.getElementById('repoUrl').value = '';
+      document.getElementById('envVars').innerHTML = '';
+      loadBots();
+    }
+
+    async function deployBot(id) {
+      await fetch(`/api/bots/${id}/deploy`, { method: 'POST' });
+      streamLogs(id);
+      setTimeout(loadBots, 1000);
+    }
+
+    async function startBot(id) {
+      await fetch(`/api/bots/${id}/start`, { method: 'POST' });
+      loadBots();
+    }
+
+    async function stopBot(id) {
+      await fetch(`/api/bots/${id}/stop`, { method: 'POST' });
+      loadBots();
+    }
+
+    async function deleteBot(id) {
+      if (!confirm('Supprimer ce bot ?')) return;
+      await fetch(`/api/bots/${id}`, { method: 'DELETE' });
+      loadBots();
+    }
+
+    function streamLogs(id) {
+      const logBox = document.getElementById(`logs-${id}`);
+      if (!logBox) return;
+      const es = new EventSource(`/api/bots/${id}/logs/stream`);
+      es.onmessage = (e) => {
+        const line = JSON.parse(e.data);
+        const div = document.createElement('div');
+        div.className = line.level === 'error' ? 'log-error' : 'log-info';
+        div.textContent = `[${new Date(line.ts).toLocaleTimeString()}] ${line.text}`;
+        logBox.appendChild(div);
+        logBox.scrollTop = logBox.scrollHeight;
+      };
+    }
+
+    async function loadBots() {
+      const res = await fetch('/api/bots');
+      const bots = await res.json();
+      const list = document.getElementById('botList');
+      list.innerHTML = '';
+      if (bots.length === 0) {
+        list.innerHTML = '<div style="text-align:center;color:#444;padding:40px">Aucun bot ajouté</div>';
+        return;
+      }
+      bots.forEach(bot => {
+        const div = document.createElement('div');
+        div.className = 'bot-card';
+        div.innerHTML = `
+          <div class="bot-header" onclick="toggleBody('${bot.id}')">
+            <div class="bot-info">
+              <h3>${bot.name}</h3>
+              <small>${bot.repoUrl}</small>
+            </div>
+            <span class="status ${bot.status}">${bot.status}</span>
+          </div>
+          <div class="bot-body" id="body-${bot.id}">
+            <div class="actions">
+              <button class="btn btn-deploy" onclick="deployBot('${bot.id}')">🚀 Deploy</button>
+              <button class="btn btn-start" onclick="startBot('${bot.id}')">▶ Start</button>
+              <button class="btn btn-stop" onclick="stopBot('${bot.id}')">■ Stop</button>
+              <button class="btn btn-delete" onclick="deleteBot('${bot.id}')">🗑 Supprimer</button>
+            </div>
+            <div class="logs" id="logs-${bot.id}"></div>
+          </div>`;
+        list.appendChild(div);
+        loadLogs(bot.id);
+      });
+    }
+
+    async function loadLogs(id) {
+      const res = await fetch(`/api/bots/${id}/logs`);
+      const logs = await res.json();
+      const box = document.getElementById(`logs-${id}`);
+      if (!box) return;
+      logs.forEach(line => {
+        const div = document.createElement('div');
+        div.className = line.level === 'error' ? 'log-error' : 'log-info';
+        div.textContent = `[${new Date(line.ts).toLocaleTimeString()}] ${line.text}`;
+        box.appendChild(div);
+      });
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function toggleBody(id) {
+      const body = document.getElementById(`body-${id}`);
+      body.classList.toggle('open');
+      if (body.classList.contains('open')) streamLogs(id);
+    }
+
+    loadBots();
+    setInterval(loadBots, 5000);
+  </script>
+</body>
+</html>
