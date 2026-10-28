@@ -125,27 +125,30 @@ async function deployBot(id) {
     await stopBot(id);
   }
 
-  // Clone ou pull
+  // Toujours supprimer et re-cloner pour garantir un code frais
   if (fs.existsSync(botDir)) {
-    appendLog(id, `📥 Pulling latest from branch ${bot.branch}...`, 'info');
+    appendLog(id, `🗑 Removing old directory...`, 'info');
     try {
-      const out = execSync(`git -C "${botDir}" fetch origin && git -C "${botDir}" reset --hard origin/${bot.branch}`, { timeout: 60000 });
-      appendLog(id, out.toString().trim() || 'Pull successful', 'info');
+      fs.rmSync(botDir, { recursive: true, force: true });
+      appendLog(id, '✅ Old directory removed', 'info');
     } catch (e) {
-      appendLog(id, `Git pull failed: ${e.message}`, 'error');
-      statuses[id] = 'error';
-      return;
+      appendLog(id, `Warning: could not remove old dir: ${e.message}`, 'error');
     }
-  } else {
-    appendLog(id, `📦 Cloning ${bot.repoUrl} (branch: ${bot.branch})...`, 'info');
-    try {
-      const out = execSync(`git clone --branch ${bot.branch} --depth 1 "${bot.repoUrl}" "${botDir}"`, { timeout: 120000 });
-      appendLog(id, out.toString().trim() || 'Clone successful', 'info');
-    } catch (e) {
-      appendLog(id, `Git clone failed: ${e.message}`, 'error');
-      statuses[id] = 'error';
-      return;
-    }
+  }
+
+  appendLog(id, `📦 Cloning ${bot.repoUrl} (branch: ${bot.branch})...`, 'info');
+  try {
+    execSync(`git clone --branch ${bot.branch} --depth 1 "${bot.repoUrl}" "${botDir}"`, { timeout: 120000 });
+    appendLog(id, '✅ Clone successful', 'info');
+
+    // Affiche les fichiers clonés
+    const files = execSync(`git -C "${botDir}" show --stat HEAD`, { timeout: 10000 }).toString().trim();
+    const lastLine = files.split('\n').pop();
+    appendLog(id, `📋 ${lastLine}`, 'info');
+  } catch (e) {
+    appendLog(id, `Git clone failed: ${e.message}`, 'error');
+    statuses[id] = 'error';
+    return;
   }
 
   // Install deps
