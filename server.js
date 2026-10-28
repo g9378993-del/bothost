@@ -150,6 +150,13 @@ app.get('/bots/:id/logs', (req, res) => {
   });
 });
 
+// --- GET /bots/:id/env --- retourne les env vars en clair (protégé par auth)
+app.get('/bots/:id/env', (req, res) => {
+  const bot = botManager.getBot(req.params.id);
+  if (!bot) return res.status(404).json({ error: 'Bot not found' });
+  res.json({ env: bot.env || {} });
+});
+
 // --- GET /bots/:id/logs-poll --- polling fallback (EventSource ne supporte pas Bearer)
 app.get('/bots/:id/logs-poll', (req, res) => {
   const bot = botManager.getBot(req.params.id);
