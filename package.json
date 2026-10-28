@@ -1,21 +1,14 @@
 {
-  "name": "bothost",
+  "name": "moon-hosting",
   "version": "1.0.0",
-  "description": "Self-hosted Discord bot manager",
-  "main": "src/server.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "uuid": "^9.0.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "multer": "^1.4.5-lts.1",
+    "better-sqlite3": "^9.4.3",
+    "cors": "^2.8.5"
   }
 }
