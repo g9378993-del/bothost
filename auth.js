@@ -1,16 +1,31 @@
-/**
- * Middleware simple : vérifie le header Authorization: Bearer <API_SECRET>
- * Render génère automatiquement la valeur de API_SECRET via generateValue: true
- */
-function requireAuth(req, res, next) {
-  const secret = process.env.API_SECRET;
-  if (!secret) return next(); // pas de secret configuré = pas d'auth (dev local)
+const passport = require('passport');
+const GitHubStrategy = require('passport-github2').Strategy;
+const { v4: uuidv4 } = require('uuid');
+const db = require('./database');
 
-  const auth = req.headers['authorization'];
-  if (!auth || auth !== `Bearer ${secret}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  next();
-}
+passport.use(new GitHubStrategy({
+  clientID: process.env.GITHUB_CLIENT_ID,
+  clientSecret: process.env.GITHUB_CLIENT_SECRET,
+  callbackURL: process.env.CALLBACK_URL || 'https://bothost-r95c.onrender.com/auth/github/callback'
+}, (accessToken, refreshToken, profile, done) => {
+  db.get('SELECT * FROM users WHERE github_id = ?', [profile.id], (err, user) => {
+    if (user) return done(null, user);
+    const newUser = {
+      id: uuidv4(),
+      github_id: profile.id,
+      username: profile.username,
+      avatar: profile.photos?.[0]?.value || ''
+    };
+    db.run('INSERT INTO users (id, github_id, username, avatar) VALUES (?, ?, ?, ?)',
+      [newUser.id, newUser.github_id, newUser.username, newUser.avatar],
+      () => done(null, newUser)
+    );
+  });
+}));
 
-module.exports = { requireAuth };
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser((id, done) => {
+  db.get('SELECT * FROM users WHERE id = ?', [id], (err, user) => done(err, user));
+});
+
+module.exports = passport;
