@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moon Hosting</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--bg:#08090a;--card:#111213;--card2:#1a1b1d;--border:#222426;--purple:#7289da;--green:#3ba55c;--red:#ed4245;--orange:#faa61a;--text:#fff;--muted:#72767d}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+
+    /* LOGIN PAGE */
+    .login-page{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;text-align:center}
+    .login-logo{font-size:64px;margin-bottom:16px}
+    .login-title{font-size:28px;font-weight:800;margin-bottom:8px}
+    .login-sub{color:var(--muted);font-size:15px;margin-bottom:40px;max-width:280px;line-height:1.5}
+    .login-features{display:flex;flex-direction:column;gap:12px;margin-bottom:40px;width:100%;max-width:300px}
+    .feature{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;text-align:left}
+    .feature-icon{font-size:20px;flex-shrink:0}
+    .feature-text{font-size:13px;color:var(--muted)}
+    .feature-text strong{color:var(--text);display:block;font-size:14px;margin-bottom:2px}
+    .btn-github{background:#fff;color:#000;border:none;border-radius:12px;padding:16px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%;max-width:300px;display:flex;align-items:center;justify-content:center;gap:10px}
+    .btn-github svg{width:20px;height:20px}
+
+    /* APP */
+    .app{display:none}
+    .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+    .topbar-left{display:flex;align-items:center;gap:10px}
+    .topbar h1{font-size:17px;font-weight:700;color:var(--text)}
+    .topbar h1 span{color:var(--purple)}
+    .hamburger{background:none;border:none;cursor:pointer;padding:8px;display:flex;flex-direction:column;gap:5px}
+    .hamburger span{display:block;width:22px;height:2px;background:var(--text);border-radius:2px}
+    .avatar{width:32px;height:32px;border-radius:50%;border:2px solid var(--border)}
+
+    /* DRAWER */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;display:none;backdrop-filter:blur(4px)}
+    .overlay.open{display:block}
+    .drawer{position:fixed;left:0;top:0;bottom:0;width:270px;background:var(--card);z-index:201;transform:translateX(-100%);transition:transform 0.2s ease;display:flex;flex-direction:column}
+    .drawer.open{transform:translateX(0)}
+    .drawer-top{padding:20px 16px;border-bottom:1px solid var(--border)}
+    .drawer-user{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+    .drawer-avatar{width:40px;height:40px;border-radius:50%}
+    .drawer-username{font-weight:600;font-size:15px}
+    .drawer-tag{font-size:12px;color:var(--muted)}
+    .drawer-nav{padding:8px 0;flex:1}
+    .drawer-item{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;font-size:14px;color:var(--muted);transition:all 0.15s;border-left:3px solid transparent}
+    .drawer-item:hover{background:var(--card2);color:var(--text)}
+    .drawer-item.active{color:var(--purple);background:rgba(114,137,218,0.08);border-left-color:var(--purple)}
+    .drawer-item .icon{font-size:16px;width:20px;text-align:center}
+    .drawer-bottom{padding:12px 16px;border-top:1px solid var(--border)}
+    .btn-logout{width:100%;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:10px;font-size:13px;cursor:pointer}
+    .btn-logout:hover{border-color:var(--red);color:var(--red)}
+
+    /* PAGES */
+    .page{display:none;padding:20px 16px;max-width:600px;margin:0 auto}
+    .page.active{display:block}
+
+    /* PROJECTS */
+    .page-header{margin-bottom:24px}
+    .page-title{font-size:22px;font-weight:800;margin-bottom:4px}
+    .page-sub{color:var(--muted);font-size:13px}
+    .btn-new{background:var(--purple);color:#fff;border:none;border-radius:12px;padding:14px;width:100%;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:20px;transition:opacity 0.15s}
+    .btn-new:active{opacity:0.8}
+    .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+    .empty-state div{font-size:48px;margin-bottom:12px}
+    .empty-state p{font-size:14px}
+
+    /* PROJECT CARD */
+    .project-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;active:opacity:0.8}
+    .project-card:hover{border-color:var(--purple);background:var(--card2)}
+    .pc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+    .pc-name{font-size:15px;font-weight:600;margin-bottom:3px}
+    .pc-repo{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px}
+    .pc-meta{display:flex;align-items:center;gap:8px;margin-top:10px}
+    .pc-runtime{font-size:11px;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--muted)}
+    .status-pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;flex-shrink:0}
+    .running{background:rgba(59,165,92,0.2);color:var(--green);border:1px solid rgba(59,165,92,0.3)}
+    .stopped{background:rgba(114,118,125,0.15);color:var(--muted);border:1px solid var(--border)}
+    .error{background:rgba(237,66,69,0.2);color:var(--red);border:1px solid rgba(237,66,69,0.3)}
+    .deploying,.starting{background:rgba(250,166,26,0.2);color:var(--orange);border:1px solid rgba(250,166,26,0.3)}
+
+    /* ADD FORM */
+    .back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;margin-bottom:20px;padding:0}
+    .form-section{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+    .form-section h3{font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:16px}
+    .field{margin-bottom:14px}
+    .field:last-child{margin-bottom:0}
+    .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500}
+    .field input,.field select{width:100%;padding:11px 13px;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px}
+    .field input:focus,.field select:focus{outline:none;border-color:var(--purple)}
+    .env-row{display:flex;gap:8px;margin-bottom:8px}
+    .env-row input{flex:1;padding:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px}
+    .btn-add-env{background:none;border:1px dashed var(--border);color:var(--muted);border-radius:8px;padding:9px;width:100%;cursor:pointer;font-size:13px}
+    .btn-rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:0 4px}
+    .btn-submit{background:var(--purple);color:#fff;border:none;border-radius:12px;padding:14px;width:100%;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px}
+    .btn-cancel-form{background:none;border:1px solid var(--border);color:var(--muted);border-radius:12px;padding:14px;width:100%;font-size:14px;cursor:pointer}
+
+    /* DETAIL */
+    .detail-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+    .d-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+    .d-name{font-size:22px;font-weight:800;margin-bottom:4px}
+    .d-repo{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+    .d-status{display:inline-flex;align-items:center;gap:6px;margin-top:8px}
+    .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .status-dot.running{background:var(--green);box-shadow:0 0 8px var(--green)}
+    .status-dot.stopped{background:var(--muted)}
+    .status-dot.error{background:var(--red)}
+    .status-dot.deploying,.status-dot.starting{background:var(--orange)}
+    .d-status-text{font-size:13px;font-weight:600}
+    .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+    .action-btn{padding:14px;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity 0.15s}
+    .action-btn:active{opacity:0.7}
+    .a-deploy{background:var(--purple);color:#fff}
+    .a-start{background:var(--green);color:#fff}
+    .a-stop{background:var(--card2);color:var(--muted);border:1px solid var(--border)}
+    .a-delete{background:rgba(237,66,69,0.15);color:var(--red);border:1px solid rgba(237,66,69,0.3)}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .info-item{background:var(--card2);border-radius:10px;padding:12px}
+    .info-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+    .info-value{font-size:14px;font-weight:600}
+    .logs-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    .logs-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .logs-head span{font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);font-weight:600}
+    .btn-cl{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px}
+    .logs-body{padding:12px;height:280px;overflow-y:auto;font-family:'Courier New',monospace;font-size:12px;line-height:1.7}
+    .log-l{padding:1px 0}
+    .log-l.error{color:var(--red)}
+    .log-l.info{color:#8e9297}
+    .log-time{color:#444;margin-right:8px;user-select:none}
+    .no-logs{color:var(--muted);text-align:center;padding:40px 0;font-size:13px}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-page" id="loginPage">
+  <div class="login-logo">🌙</div>
+  <div class="login-title">Moon Hosting</div>
+  <div class="login-sub">Hébergez vos bots Discord gratuitement, 24/7, sans configuration.</div>
+  <div class="login-features">
+    <div class="feature">
+      <div class="feature-icon">🚀</div>
+      <div class="feature-text"><strong>Deploy en 1 clic</strong>Connecte ton repo GitHub et c'est parti</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-text"><strong>Logs en temps réel</strong>Surveille ton bot en direct</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔒</div>
+      <div class="feature-text"><strong>Sécurisé</strong>Tes bots restent privés</div>
+    </div>
+  </div>
+  <button class="btn-github" onclick="location.href='/auth/github'">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+    Continuer avec GitHub
+  </button>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" onclick="openDrawer()"><span></span><span></span><span></span></button>
+      <h1>🌙 <span>Moon</span> Hosting</h1>
+    </div>
+    <img class="avatar" id="topAvatar" src="" alt="">
+  </div>
+
+  <div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-top">
+      <div class="drawer-user">
+        <img class="drawer-avatar" id="drawerAvatar" src="" alt="">
+        <div>
+          <div class="drawer-username" id="drawerUsername"></div>
+          <div class="drawer-tag">Moon Hosting</div>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-nav">
+      <div class="drawer-item active" onclick="showPage('projects');closeDrawer()"><span class="icon">📦</span> Projects</div>
+    </div>
+    <div class="drawer-bottom">
+      <button class="btn-logout" onclick="location.href='/auth/logout'">Se déconnecter</button>
+    </div>
+  </div>
+
+  <!-- PROJECTS PAGE -->
+  <div class="page active" id="page-projects">
+    <div class="page-header">
+      <div class="page-title">Projects</div>
+      <div class="page-sub">Gérez vos bots Discord</div>
+    </div>
+    <button class="btn-new" onclick="showPage('add')">+ Nouveau projet</button>
+    <div id="project-list"></div>
+  </div>
+
+  <!-- ADD PAGE -->
+  <div class="page" id="page-add">
+    <button class="back-btn" onclick="showPage('projects')">← Retour</button>
+    <div class="form-section">
+      <h3>Informations</h3>
+      <div class="field"><label>Nom du bot</label><input type="text" id="f-name" placeholder="Mon Bot Discord"></div>
+      <div class="field"><label>URL GitHub</label><input type="text" id="f-repo" placeholder="https://github.com/user/repo"></div>
+      <div class="field"><label>Branch</label><input type="text" id="f-branch" placeholder="main"></div>
+      <div class="field"><label>Fichier principal</label><input type="text" id="f-main" placeholder="index.js"></div>
+      <div class="field"><label>Runtime</label><select id="f-runtime"><option value="node">Node.js</option><option value="python">Python</option></select></div>
+    </div>
+    <div class="form-section">
+      <h3>Variables d'environnement</h3>
+      <div id="f-env"></div>
+      <button class="btn-add-env" onclick="addEnvRow()">+ Ajouter variable</button>
+    </div>
+    <button class="btn-submit" onclick="addBot()">Créer le projet</button>
+    <button class="btn-cancel-form" onclick="showPage('projects')">Annuler</button>
+  </div>
+
+  <!-- DETAIL PAGE -->
+  <div class="page" id="page-detail">
+    <button class="back-btn" onclick="showPage('projects')">← Projects</button>
+    <div class="detail-card">
+      <div class="d-header">
+        <div>
+          <div class="d-name" id="d-name"></div>
+          <div class="d-repo" id="d-repo"></div>
+          <div class="d-status">
+            <div class="status-dot" id="d-dot"></div>
+            <span class="d-status-text" id="d-status-text"></span>
+          </div>
+        </div>
+      </div>
+      <div class="info-grid">
+        <div class="info-item"><div class="info-label">Branch</div><div class="info-value" id="d-branch"></div></div>
+        <div class="info-item"><div class="info-label">Fichier</div><div class="info-value" id="d-file"></div></div>
+        <div class="info-item"><div class="info-label">Runtime</div><div class="info-value" id="d-runtime"></div></div>
+        <div class="info-item"><div class="info-label">Statut</div><div class="info-value" id="d-status2"></div></div>
+      </div>
+    </div>
+    <div class="action-grid">
+      <button class="action-btn a-deploy" onclick="doAction('deploy')">🚀 Deploy</button>
+      <button class="action-btn a-start" onclick="doAction('start')">▶ Start</button>
+      <button class="action-btn a-stop" onclick="doAction('stop')">■ Stop</button>
+      <button class="action-btn a-delete" onclick="doDelete()">🗑 Supprimer</button>
+    </div>
+    <div class="logs-card">
+      <div class="logs-head"><span>Logs</span><button class="btn-cl" onclick="clearLogs()">Vider</button></div>
+      <div class="logs-body" id="d-logs"><div class="no-logs">Aucun log</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentBot = null;
+  let logStream = null;
+  let pollInterval = null;
+
+  // INIT
+  async function init() {
+    const res = await fetch('/auth/me');
+    const user = await res.json();
+    if (!user) {
+      document.getElementById('loginPage').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    } else {
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('topAvatar').src = user.avatar;
+      document.getElementById('drawerAvatar').src = user.avatar;
+      document.getElementById('drawerUsername').textContent = user.username;
+      loadProjects();
+    }
+  }
+
+  function openDrawer(){document.getElementById('drawer').classList.add('open');document.getElementById('overlay').classList.add('open')}
+  function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('overlay').classList.remove('open')}
+
+  function showPage(p) {
+    document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+    document.getElementById('page-'+p).classList.add('active');
+    if(p==='projects') loadProjects();
+    if(p==='detail') loadDetail();
+  }
+
+  function addEnvRow(k='',v='') {
+    const r=document.createElement('div');r.className='env-row';
+    r.innerHTML=`<input type="text" placeholder="KEY" value="${k}"><input type="text" placeholder="VALUE" value="${v}"><button class="btn-rm" onclick="this.parentNode.remove()">✕</button>`;
+    document.getElementById('f-env').appendChild(r);
+  }
+
+  async function addBot() {
+    const name=document.getElementById('f-name').value.trim();
+    const repoUrl=document.getElementById('f-repo').value.trim();
+    const branch=document.getElementById('f-branch').value.trim()||'main';
+    const mainFile=document.getElementById('f-main').value.trim()||'index.js';
+    const runtime=document.getElementById('f-runtime').value;
+    if(!name||!repoUrl)return alert('Nom et URL GitHub requis');
+    const env={};
+    document.querySelectorAll('#f-env .env-row').forEach(row=>{
+      const[k,v]=row.querySelectorAll('input');
+      if(k.value.trim())env[k.value.trim()]=v.value;
+    });
+    await fetch('/api/bots',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,repoUrl,branch,mainFile,runtime,env})});
+    document.getElementById('f-name').value='';document.getElementById('f-repo').value='';
+    document.getElementById('f-branch').value='';document.getElementById('f-main').value='';
+    document.getElementById('f-env').innerHTML='';
+    showPage('projects');
+  }
+
+  async function loadProjects() {
+    const res=await fetch('/api/bots');
+    const bots=await res.json();
+    const list=document.getElementById('project-list');
+    if(!bots.length){list.innerHTML='<div class="empty-state"><div>🤖</div><p>Aucun projet — crée le premier !</p></div>';return;}
+    list.innerHTML=bots.map(b=>`
+      <div class="project-card" onclick="openBot(${JSON.stringify(b).replace(/"/g,'&quot;')})">
+        <div class="pc-top">
+          <div><div class="pc-name">${b.name}</div><div class="pc-repo">${b.repo_url||b.repoUrl}</div></div>
+          <span class="status-pill ${b.status}">${b.status}</span>
+        </div>
+        <div class="pc-meta"><span class="pc-runtime">${b.runtime||'node'}</span></div>
+      </div>`).join('');
+  }
+
+  function openBot(bot) {
+    currentBot=bot;
+    if(logStream){logStream.close();logStream=null;}
+    if(pollInterval){clearInterval(pollInterval);pollInterval=null;}
+    showPage('detail');
+  }
+
+  async function loadDetail() {
+    if(!currentBot)return;
+    const res=await fetch('/api/bots');
+    const bots=await res.json();
+    const bot=bots.find(b=>b.id===currentBot.id);
+    if(!bot)return showPage('projects');
+    currentBot=bot;
+    document.getElementById('d-name').textContent=bot.name;
+    document.getElementById('d-repo').textContent=bot.repo_url||bot.repoUrl;
+    document.getElementById('d-branch').textContent=bot.branch||'main';
+    document.getElementById('d-file').textContent=bot.main_file||bot.mainFile||'index.js';
+    document.getElementById('d-runtime').textContent=bot.runtime||'node';
+    document.getElementById('d-status2').textContent=bot.status;
+    const dot=document.getElementById('d-dot');
+    dot.className='status-dot '+bot.status;
+    document.getElementById('d-status-text').textContent=bot.status;
+    loadLogs();
+    startStream();
+    pollInterval=setInterval(refreshStatus,2000);
+  }
+
+  async function refreshStatus() {
+    if(!currentBot)return;
+    const r=await fetch(`/api/bots/${currentBot.id}/status`);
+    const s=await r.json();
+    document.getElementById('d-dot').className='status-dot '+s.status;
+    document.getElementById('d-status-text').textContent=s.status;
+    document.getElementById('d-status2').textContent=s.status;
+  }
+
+  async function loadLogs() {
+    const r=await fetch(`/api/bots/${currentBot.id}/logs`);
+    const logs=await r.json();
+    const box=document.getElementById('d-logs');
+    if(!logs.length){box.innerHTML='<div class="no-logs">Aucun log</div>';return;}
+    box.innerHTML=logs.map(l=>`<div class="log-l ${l.level}"><span class="log-time">${new Date(l.ts).toLocaleTimeString()}</span>${esc(l.text)}</div>`).join('');
+    box.scrollTop=box.scrollHeight;
+  }
+
+  function startStream() {
+    if(logStream)logStream.close();
+    logStream=new EventSource(`/api/bots/${currentBot.id}/logs/stream`);
+    logStream.onmessage=(e)=>{
+      const l=JSON.parse(e.data);
+      const box=document.getElementById('d-logs');
+      const empty=box.querySelector('.no-logs');if(empty)empty.remove();
+      const d=document.createElement('div');d.className='log-l '+l.level;
+      d.innerHTML=`<span class="log-time">${new Date(l.ts).toLocaleTimeString()}</span>${esc(l.text)}`;
+      box.appendChild(d);box.scrollTop=box.scrollHeight;
+    };
+  }
+
+  async function doAction(action) {
+    if(!currentBot)return;
+    await fetch(`/api/bots/${currentBot.id}/${action}`,{method:'POST'});
+    setTimeout(refreshStatus,500);setTimeout(refreshStatus,2000);setTimeout(refreshStatus,5000);
+  }
+
+  async function doDelete() {
+    if(!confirm('Supprimer ce bot ?'))return;
+    await fetch(`/api/bots/${currentBot.id}`,{method:'DELETE'});
+    if(logStream)logStream.close();
+    if(pollInterval)clearInterval(pollInterval);
+    currentBot=null;showPage('projects');
+  }
+
+  function clearLogs(){document.getElementById('d-logs').innerHTML='<div class="no-logs">Aucun log</div>';}
+  function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  init();
+</script>
+</body>
+</html>
